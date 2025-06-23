@@ -43,8 +43,6 @@ public class Singleton<T>: MonoBehaviour where T : MonoBehaviour
 } //END Singleton<T> class
 #endif
 
-
-
 #endregion
 
 namespace gambit.config

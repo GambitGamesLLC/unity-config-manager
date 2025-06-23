@@ -8,6 +8,9 @@
 
 #region IMPORTS
 
+using System;
+using UnityEngine;
+
 #if GAMBIT_SINGLETON
 using gambit.singleton;
 #else
@@ -40,8 +43,7 @@ public class Singleton<T>: MonoBehaviour where T : MonoBehaviour
 } //END Singleton<T> class
 #endif
 
-using System;
-using UnityEngine;
+
 
 #endregion
 

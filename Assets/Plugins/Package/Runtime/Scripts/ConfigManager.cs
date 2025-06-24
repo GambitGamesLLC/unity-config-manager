@@ -222,7 +222,7 @@ namespace gambit.config
                 return;
             }
 
-            File.Create( system.options.path );
+            File.Create( system.options.path ).Close();
 
             OnSuccess?.Invoke();
 

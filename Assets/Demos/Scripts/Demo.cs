@@ -36,6 +36,7 @@ namespace gambit.config
         /// </summary>
         public string path;
 
+
         /// <summary>
         /// Generate a config file if missing from a backup .json file
         /// </summary>
@@ -67,7 +68,7 @@ namespace gambit.config
                 },
 
                 //OnSuccess
-                (ConfigManager.ConfigManagerSystem system ) => { CopyFileFromBackupIfMissing( system ); },
+                (ConfigManager.ConfigManagerSystem system ) =>  { CopyFileFromBackupIfMissing( system ); },
 
                 //OnFailed
                 (string error)=> { Debug.LogError( error ); }
@@ -93,11 +94,12 @@ namespace gambit.config
             {
                 if(exists)
                 {
-                    Debug.Log( "Demo.cs Start() ConfigManager.Create() was successful and file exists" );
+                    if( debug ) Debug.Log( "Demo.cs Start() ConfigManager.Create() was successful and file exists" );
+                    ReadFileToConsole( system );
                 }
                 else
                 {
-                    Debug.Log( "Demo.cs Start() ConfigManager.Create() was successful but file does not exist at the path" );
+                    if( debug ) Debug.Log( "Demo.cs Start() ConfigManager.Create() was successful but file does not exist at the path" );
 
                     if(createIfMissing)
                     {
@@ -108,7 +110,7 @@ namespace gambit.config
                             //OnSuccess
                             () => 
                             {
-                                Debug.Log( "Demo.cs Start() ConfigManager.CreateFile() generated new file since one did not exist" );
+                                if( debug ) Debug.Log( "Demo.cs Start() ConfigManager.CreateFile() generated new file since one did not exist" );
                                 CopyBackupToFile(system); 
                             },
 
@@ -154,7 +156,8 @@ namespace gambit.config
                     //OnSuccess
                     () =>
                     {
-                        Debug.Log( "Demo.cs ConfigManager.WriteFileContents() successfully copied backup to file" );
+                        if( debug ) Debug.Log( "Demo.cs ConfigManager.WriteFileContents() successfully copied backup to file" );
+                        ReadFileToConsole( system );
                     },
 
                      //OnFailed
@@ -168,6 +171,45 @@ namespace gambit.config
 #endif
 
         } //END CopyBackupToFile Method
+
+        #endregion
+
+        #region PRIVATE - READ FILE TO CONSOLE
+
+        /// <summary>
+        /// Reads the file from the path and logs it to the console
+        /// </summary>
+        /// <param name="system"></param>
+        //------------------------------------------------------------------------------//
+        private void ReadFileToConsole( ConfigManager.ConfigManagerSystem system )
+        //------------------------------------------------------------------------------//
+        {
+#if EXT_TOTALJSON
+            if(system == null)
+                Debug.LogError( "Demo.cs ReadFileToConsole() system object is null" );
+
+            if(system.options.path == null || (system.options.path != null && system.options.path == "") )
+                Debug.LogError( "Demo.cs ReadFileToConsole() system.options.path is null or empty" );
+
+            ConfigManager.ReadFileContents
+            (
+                system,
+
+                //OnSuccess
+                (JSON json)=>
+                {
+                    Debug.Log( json.CreatePrettyString() );
+                },
+
+                //OnError
+                (string error)=>
+                {
+                    Debug.LogError( "Demo.cs ReadFileToConsole() error = " + error );
+                }
+            );
+#endif
+
+        } //END ReadFileToConsole Method
 
         #endregion
 

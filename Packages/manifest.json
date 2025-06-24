@@ -1,6 +1,8 @@
 {
   "dependencies": {
-    "com.unity.ai.navigation": "2.0.7",
+	"com.leguar.totaljson": "https://github.com/GambitGamesLLC/unity-plugin-totaljson.git?path=Assets/Plugins/Package",
+    "com.gambit.singleton": "https://github.com/GambitGamesLLC/unity-singleton.git?path=Assets/Plugins/Package",
+	"com.unity.ai.navigation": "2.0.7",
     "com.unity.collab-proxy": "2.8.2",
     "com.unity.ide.rider": "3.0.36",
     "com.unity.ide.visualstudio": "2.0.23",

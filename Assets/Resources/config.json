@@ -1,0 +1,11 @@
+{
+	"app": {
+		"longname": "M3DVR NeuroGuide Launcher",
+		"shortname": "M3DVR",
+		"path": "%LOCALAPPDATA%\\M3DVR\\Launcher\\launcher.exe"
+	},
+	"communication": {
+		"address": "127.0.0.1",
+		"port": 50000
+	}
+}

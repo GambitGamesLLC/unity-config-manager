@@ -1,5 +1,19 @@
 {
   "dependencies": {
+    "com.gambit.singleton": {
+      "version": "https://github.com/GambitGamesLLC/unity-singleton.git?path=Assets/Plugins/Package",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "ad33daf5f686db31350d9df7a8eb103f6ba907e3"
+    },
+    "com.leguar.totaljson": {
+      "version": "https://github.com/GambitGamesLLC/unity-plugin-totaljson.git?path=Assets/Plugins/Package",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "b826aa580f8eeb20a9fb7767cf834f1cc002b869"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.7",
       "depth": 0,

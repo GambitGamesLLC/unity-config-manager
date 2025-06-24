@@ -2,7 +2,8 @@
     "name": "gambit.config",
     "rootNamespace": "",
     "references": [
-        "gambit.singleton"
+        "gambit.singleton",
+        "Leguar.TotalJSON"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -16,6 +17,11 @@
             "name": "com.gambit.singleton",
             "expression": "",
             "define": "GAMBIT_SINGLETON"
+        },
+        {
+            "name": "com.leguar.totaljson",
+            "expression": "",
+            "define": "EXT_TOTALJSON"
         }
     ],
     "noEngineReferences": false

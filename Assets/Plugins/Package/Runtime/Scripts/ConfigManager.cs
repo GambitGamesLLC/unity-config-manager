@@ -60,11 +60,6 @@ namespace gambit.config
     {
         #region PUBLIC - VARIABLES
 
-        /// <summary>
-        /// Current instance of the ConfigSystem instantiated during Create()
-        /// </summary>
-        public static ConfigManagerSystem system;
-
         #endregion
 
         #region PUBLIC - CREATION OPTIONS
@@ -111,6 +106,13 @@ namespace gambit.config
             /// </summary>
             public Options options;
 
+#if EXT_TOTALJSON
+            /// <summary>
+            /// The JSON contained within the config file
+            /// </summary>
+            public JSON json;
+#endif
+
         } //END ConfigManagerSystem Class
 
         #endregion
@@ -135,10 +137,7 @@ namespace gambit.config
             if(options == null)
                 OnFailed?.Invoke( "ConfigManager.cs Create() Options object passed in is null, unable to continue" );
 
-            if(system != null)
-                OnFailed?.Invoke( "ConfigManager.cs Create() ConfigManagerSystem is not null, please call Destroy() before attempting to create a new ConfigManagerSystem via this Create() method" );
-
-            system = new ConfigManagerSystem();
+            ConfigManagerSystem system = new ConfigManagerSystem();
             system.options = options;
             
             if(system.options.path == "")
@@ -216,13 +215,38 @@ namespace gambit.config
                 return;
             }
 
-            if(DoesFileExist( system ))
+            CreateFile( system.options.path, OnSuccess, OnFailed );
+
+        } //END CreateFile Method
+
+        /// <summary>
+        /// Generates a config file at the path if one does not already exist
+        /// </summary>
+        //---------------------------------------//
+        public static void CreateFile
+        (
+            string path,
+            Action OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        //---------------------------------------//
+        {
+            if(path == null || (path != null && path == "") )
+            {
+                OnFailed?.Invoke( "ConfigManager.cs CreateFile() passed in path is null or empty" );
+                return;
+            }
+
+            if(DoesFileExist( path ))
             {
                 OnSuccess?.Invoke();
                 return;
             }
 
-            File.Create( system.options.path ).Close();
+            //Generate the directory to the file if it doesn't exist
+            Directory.CreateDirectory( Path.GetDirectoryName( path ) );
+
+            File.Create( path ).Close();
 
             OnSuccess?.Invoke();
 
@@ -252,7 +276,17 @@ namespace gambit.config
             if(system == null)
                 OnFailed?.Invoke( "ConfigManager.cs WriteFileContents() passed in system is null" );
 
-            WriteFileContents( system.options.path, json, OnSuccess, OnFailed );
+            WriteFileContents
+            ( 
+                system.options.path, 
+                json,
+                () => 
+                {
+                    system.json = json;
+                    OnSuccess?.Invoke();
+                }, 
+                OnFailed 
+            );
 
         } //END WriteFileContents Method
 
@@ -334,7 +368,18 @@ namespace gambit.config
                 return;
             }
 
-            ReadFileContents( system.options.path, OnSuccess, OnFailed );
+            ReadFileContents
+            ( 
+                system.options.path, 
+
+                (JSON json)=>
+                {
+                    system.json = json;
+                    OnSuccess?.Invoke( json );
+                }, 
+                
+                OnFailed 
+            );
 
         } //END ReadFileContents Method
 
@@ -376,6 +421,451 @@ namespace gambit.config
         } //END ReadFileContents Method
 
 #endif
+
+        #endregion
+
+        #region PUBLIC - DESTROY FILE
+
+        /// <summary>
+        /// If a file exists at the path, destroys it
+        /// </summary>
+        /// <param name="system"></param>
+        //-------------------------------------------------------------------//
+        public static void DestroyFile
+        ( 
+            ConfigManagerSystem system,
+            Action OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        //-------------------------------------------------------------------//
+        {
+
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs DestroyFile() passed in ConfigManagerSystem object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs DestroyFile() passed in ConfigManagerSystem.Options object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs DestroyFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
+                return;
+            }
+
+            DestroyFile( system.options.path, OnSuccess, OnFailed );
+
+        } //END DestroyFile Method
+
+        /// <summary>
+        /// If a file exists at the path, destroys it. OnSuccess is called if a file is destroyed or never existed.
+        /// </summary>
+        /// <param name="system"></param>
+        //-------------------------------------------------------------------//
+        public static void DestroyFile
+        (
+            string path,
+            Action OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        //-------------------------------------------------------------------//
+        {
+
+            if(path == null || (path != null && path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs DestroyFile() passed in path is null or empty, unable to continue" );
+                return;
+            }
+
+            if(DoesFileExist( path ))
+            {
+                try
+                {
+                    File.Delete( path );
+                    OnSuccess?.Invoke();
+                }
+                catch(Exception e)
+                {
+                    OnFailed?.Invoke( e.ToString() );
+                    return;
+                }
+            }
+            else
+            {
+                OnSuccess?.Invoke();
+                return;
+            }
+
+        } //END DestroyFile Method
+
+        #endregion
+
+        #region PUBLIC - REPLACE FILE
+
+#if EXT_TOTALJSON
+
+        /// <summary>
+        /// Destroys the original file if it exists, and replaces it with the file located at the resources file path and name. Do not include the file type extension
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem returned by the Create() function</param>
+        /// <param name="replacementFilePathAndName">Path and file name (no extension) to the file within the resources folder you want to use as the replacement</param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------//
+        public static void ReplaceFileUsingResources
+        //-----------------------------------------//
+        (
+            ConfigManagerSystem system,
+            string replacementFilePathAndName,
+            Action<JSON> OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        {
+
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.Options object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
+                return;
+            }
+
+            ReplaceFileUsingResources
+            (
+                system.options.path,
+                replacementFilePathAndName,
+                (JSON json)=>
+                {
+                    system.json = json;
+                    OnSuccess?.Invoke( json );
+                    return;
+                },
+                OnFailed
+            );
+
+        } //END ReplaceFileUsingResources Method
+
+        /// <summary>
+        /// Destroys the original file if it exists, and replaces it with the file located at the resources file path and name. Do not include the file type extension
+        /// </summary>
+        /// <param name="path">The direct path of the file you want to replace</param>
+        /// <param name="replacementFilePathAndName">Path and file name (no extension) to the file within the resources folder you want to use as the replacement</param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------//
+        public static void ReplaceFileUsingResources
+        //-----------------------------------------//
+        (
+            string path,
+            string replacementFilePathAndName,
+            Action<JSON> OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        {
+
+            if(path == null || (path != null && path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFileUsingResources() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
+                return;
+            }
+
+            UnityEngine.Object obj = Resources.Load( replacementFilePathAndName );
+
+            if(obj == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFileUsingResources() unable to load resources to object, check if the file and the value of replacementFilePathAndName match up = " + replacementFilePathAndName );
+                return;
+            }
+
+            string jsonAsString = obj.ToString();
+
+            try
+            {
+                JSON json = JSON.ParseString( jsonAsString );
+
+                ReplaceFile
+                (
+                    path,
+                    json,
+                    OnSuccess,
+                    OnFailed
+                );
+            }
+            catch(Exception e)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFileUsingResources() error = " + e.ToString() );
+            }
+
+        } //END ReplaceFileUsingResources Method
+
+        /// <summary>
+        /// Destroys the original file if it exists, and replaces it with the file located at the replacement file path
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem returned by the Create() function</param>
+        /// <param name="replacementFilePath">Direct path to the file you want to use as the replacement</param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------//
+        public static void ReplaceFile
+        //-----------------------------------------//
+        (
+            ConfigManagerSystem system,
+            string replacementFilePath,
+            Action<JSON> OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        {
+
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.Options object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
+                return;
+            }
+
+            ReplaceFile
+            ( 
+                system.options.path,
+                replacementFilePath,
+                
+                (JSON json)=>
+                {
+                    system.json = json;
+                    OnSuccess?.Invoke( json );
+                }, 
+                
+                OnFailed 
+            );
+
+        } //END ReplaceFile Method
+
+        /// <summary>
+        /// Destroys the original file if it exists, and replaces it with the file located at the replacement file path
+        /// </summary>
+        /// <param name="path">The direct path to the original file that you want to replace</param>
+        /// <param name="replacementFilePath">Direct path to the file you want to use as the replacement</param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------//
+        public static void ReplaceFile
+        //-----------------------------------------//
+        (
+            string path,
+            string replacementFilePath,
+            Action<JSON> OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        {
+
+            if(path == null || (path != null && path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in path object is null or empty, unable to continue" );
+                return;
+            }
+
+            if(replacementFilePath == null || (replacementFilePath != null && replacementFilePath == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in replacementFilePath object is null or empty, unable to continue" );
+                return;
+            }
+
+            if(!DoesFileExist( replacementFilePath ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in replacementFilePath does not exist, unable to continue" );
+                return;
+            }
+
+            //Check if the replacement file path can be read as JSON
+            try
+            {
+                JSON json = JSON.ParseString( path );
+
+                ReplaceFile
+                (
+                    path,
+                    json,
+                    OnSuccess,
+                    OnFailed
+                );
+            }
+            catch(Exception e) 
+            {
+                OnFailed?.Invoke( e.ToString() );
+                return;
+            }
+
+        } //END ReplaceFile Method
+
+        /// <summary>
+        /// Destroys the original file if it exists, and replaces it with a new file containing the json data
+        /// <param name="system">The ConfigManagerSystem returned by the Create() function</param>
+        /// <param name="json">JSON data you want to add to a new file and replace the original with</param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------//
+        public static void ReplaceFile
+        //-----------------------------------------//
+        (
+            ConfigManagerSystem system,
+            JSON json,
+            Action OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        {
+
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.Options object is null, unable to continue" );
+                return;
+            }
+
+            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
+                return;
+            }
+
+            ReplaceFile
+            ( 
+                system.options.path, 
+                json,
+                (JSON json) => 
+                {
+                    system.json = json;
+                    OnSuccess?.Invoke();
+                }, 
+                OnFailed 
+            );
+
+        } //END ReplaceFile Method
+
+        /// <summary>
+        /// Destroys the original file if it exists, and replaces it with a new file containing the json data
+        /// <param name="path">The path to the original file you want to replace</param>
+        /// <param name="json">JSON data you want to add to a new file and replace the original with</param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------//
+        public static void ReplaceFile
+        //-----------------------------------------//
+        (
+            string path,
+            JSON json,
+            Action<JSON> OnSuccess = null,
+            Action<string> OnFailed = null
+        )
+        {
+
+            if(path == null || (path != null && path == ""))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in path object is null or empty, unable to continue" );
+                return;
+            }
+
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in json object is null, unable to continue" );
+                return;
+            }
+
+            //Destroy the existing file
+            DestroyFile
+            (
+                path,
+
+                //OnSuccess
+                ()=>
+                {
+                    //Original file was destroyed, create a new one
+                    CreateFile
+                    ( 
+                        path,
+
+                        //OnSuccess
+                        ()=>
+                        {
+                            //Write the json to the new file
+                            WriteFileContents
+                            (
+                                path,
+                                json,
+                                ()=>
+                                {
+                                    OnSuccess?.Invoke(json);
+                                    return;
+                                },
+                                OnFailed
+                            );
+                        },
+
+                        OnFailed
+                    );
+                },
+
+                OnFailed
+            );
+
+        } //END ReplaceFile Method
+
+#endif
+
+        #endregion
+
+        #region PUBLIC - LOG DATA TO CONSOLE
+
+        /// <summary>
+        /// If the json data object in the ConfigManagerSystem exists, logs it to the console
+        /// </summary>
+        /// <param name="system"></param>
+        //----------------------------------------------------------//
+        public static void Log( ConfigManagerSystem system )
+        //----------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                return;
+            }
+
+            if(system.json == null)
+            {
+                return;
+            }
+
+            Debug.Log( system.json.CreatePrettyString() );
+        
+        } //END Log Method
 
         #endregion
 

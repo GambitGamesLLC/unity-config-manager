@@ -20,9 +20,9 @@ The demo scene shows a basic implementation of how to create and manage a config
 -   In the Inspector, you will see the `Demo.cs` script component with the following properties:
     -   **Debug**: Toggle to show debug logs in the console.
     -   **Path**: The target path for the configuration file (e.g., `C:\Users\YourUser\AppData\Local\YourApp\config.json`).
-    -   **Create If Missing**: If enabled, the manager will generate an empty config file at the specified path if it does not already exist.
     -   **Backup Path In Resources**: The path to a default JSON configuration file within the `Assets/Resources` folder (e.g., `config`). This backup will be used to populate a newly created config file.
 -   Press Play to run the scene and observe the console logs for output from the `ConfigManager`.
+-   The other 'key' arrays in the demo component are used to showcase helper functionality to pull data from the configuration json and log them to the console. This can also be accomplished directly via the TotalJSON plugin used as a dependency to manipulate JSON data.
 
 ---
 

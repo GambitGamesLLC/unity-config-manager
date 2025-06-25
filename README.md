@@ -2,11 +2,11 @@
 
 A singleton manager for Unity3D that provides a simple interface for reading and writing JSON configuration files.
 
-**Package Name:** com.gambit.config
-**GameObject Display Name:** gambit.config.ConfigManager (Singleton)
-**Namespace:** gambit.config
-**Assembly Definition:** gambit.config
-**Scripting Define Symbol:** GAMBIT_CONFIG
+**Package Name:** com.gambit.config  
+**GameObject Display Name:** gambit.config.ConfigManager (Singleton)  
+**Namespace:** gambit.config  
+**Assembly Definition:** gambit.config  
+**Scripting Define Symbol:** GAMBIT_CONFIG  
 
 ---
 

@@ -173,9 +173,35 @@ Use the `WriteFileContents` method to save a `TotalJSON` object to the file.
 **`ConfigManager.Options`**
 -   `showDebugLogs` (bool): Enables or disables internal state logs in the Unity console.
 -   `path` (string): The full path to the configuration file.
--   `createIfMissing` (bool): If true, the system will automatically generate a blank config file if one is not found at the specified path.
 
 ---
+
+## Additional Functionality
+The ConfigManager provides several other utility functions for file and data management:
+
+-   `GetNestedString(ConfigManagerSystem system, string[] keys, Action<string> OnSuccess, Action<string> OnFailed):` Recursively searches for a nested string value in the JSON data.  
+
+-   `GetNestedPath(ConfigManagerSystem system, string[] keys, Action<string> OnSuccess, Action<string> OnFailed):` Similar to GetNestedString, but expands any environment variables in the path.  
+
+-   `GetNestedInteger(ConfigManagerSystem system, string[] keys, Action<int> OnSuccess, Action<string> OnFailed):` Retrieves a nested integer value.  
+
+-   `GetNestedFloat(ConfigManagerSystem system, string[] keys, Action<float> OnSuccess, Action<string> OnFailed):` Retrieves a nested float value.  
+
+-   `GetNestedBool(ConfigManagerSystem system, string[] keys, Action<bool> OnSuccess, Action<string> OnFailed):` Retrieves a nested boolean value.  
+
+-   `DoesFileExist(ConfigManagerSystem system):` Checks if the configuration file exists.  
+
+-   `CreateFile(ConfigManagerSystem system, Action OnSuccess, Action<string> OnFailed):` Creates an empty configuration file if it doesn't already exist.  
+
+-   `DestroyFile(ConfigManagerSystem system, Action OnSuccess, Action<string> OnFailed):` Deletes the configuration file.  
+
+-   `ReplaceFileUsingResources(ConfigManagerSystem system, string replacementFilePathAndName, Action<JSON> OnSuccess, Action<string> OnFailed):` Replaces the current configuration file with a backup from the Resources folder.  
+
+-   `ReplaceFile(ConfigManagerSystem system, string replacementFilePath, Action<JSON> OnSuccess, Action<string> OnFailed):` Replaces the current configuration file with another file from a specified path.  
+
+-   `Log(ConfigManagerSystem system):` Prints the current JSON data to the console.  
+
+-   `Destroy(ConfigManagerSystem system):` Nullifies the ConfigManagerSystem object.  
 
 ## DEPENDENCIES
 

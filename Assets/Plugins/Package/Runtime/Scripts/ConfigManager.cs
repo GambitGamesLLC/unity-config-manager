@@ -14,8 +14,6 @@ using UnityEngine;
 
 #if GAMBIT_SINGLETON
 using gambit.singleton;
-using UnityEngine.Rendering.VirtualTexturing;
-
 #else
 /// <summary>
 /// Fallback Singleton base class if GAMBIT_SINGLETON is not defined.
@@ -154,7 +152,7 @@ namespace gambit.config
         #region PUBLIC - GET NESTED STRING
 
         /// <summary>
-        /// Public method to start the recursive search for a nested string. Returns it fully deserialized with any environment variables expanded
+        /// Public method to start the recursive search for a nested string. Returns a string that is deserialized
         /// </summary>
         /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
         /// <param name="keys">An array of keys representing the path to the desired value.</param>
@@ -187,7 +185,7 @@ namespace gambit.config
         } //END GetNestedString Method
 
         /// <summary>
-        /// Public method to start the recursive search for a nested string. Returns it fully deserialized with any environment variables expanded
+        /// Public method to start the recursive search for a nested string. Returns a string that is deserialized
         /// </summary>
         /// <param name="json">The root TotalJSON object to search within.</param>
         /// <param name="keys">An array of keys representing the path to the desired value.</param>
@@ -203,7 +201,7 @@ namespace gambit.config
         )
         //------------------------------------------------------------------------------------------------//
         {
-            // --- Input Validation ---
+
             if(json == null)
             {
                 OnFailed?.Invoke( "ConfigManager.cs GetNestedString() Error: Root JSON object is null." );
@@ -216,12 +214,12 @@ namespace gambit.config
             }
 
             // --- Start Recursive Search ---
-            FindPathRecursive( json, keys, 0, OnSuccess, OnFailed );
+            FindStringRecursive( json, keys, 0, OnSuccess, OnFailed );
 
         } //END GetNestedString Method
 
         /// <summary>
-        /// The private recursive function that traverses the JSON object.
+        /// The private recursive function that traverses the JSON object in search of a string.
         /// </summary>
         /// <param name="currentObject"></param>
         /// <param name="keys"></param>
@@ -229,7 +227,7 @@ namespace gambit.config
         /// <param name="OnSuccess"></param>
         /// <param name="OnFailed"></param>
         //-------------------------------------------------------------------//
-        private static void FindPathRecursive
+        private static void FindStringRecursive
         ( 
             JSON currentObject, 
             string[ ] keys, 
@@ -244,7 +242,7 @@ namespace gambit.config
             // --- Check if the current key exists ---
             if(!currentObject.ContainsKey( currentKey ))
             {
-                OnFailed?.Invoke( "ConfigManager.cs FindPathRecursive() Error: Key " + currentKey + " not found at the current level" );
+                OnFailed?.Invoke( "ConfigManager.cs FindStringRecursive() Error: Key " + currentKey + " not found at the current level" );
                 return;
             }
 
@@ -256,13 +254,12 @@ namespace gambit.config
                 // This should be the final value. Try to get it as a string.
                 try
                 {
-                    string rawPath = currentObject.GetString( currentKey );
-                    string expandedPath = Environment.ExpandEnvironmentVariables( rawPath );
-                    OnSuccess?.Invoke( expandedPath );
+                    string text = currentObject.GetString( currentKey );
+                    OnSuccess?.Invoke( text );
                 }
                 catch(Exception) // Catches if the value is not a string (e.g., an object or number)
                 {
-                    OnFailed?.Invoke( "ConfigManager.cs FindPathRecursive() Error: Final key " + currentKey + " does not point to a string value." );
+                    OnFailed?.Invoke( "ConfigManager.cs FindStringRecursive() Error: Final key " + currentKey + " does not point to a string value." );
                 }
             }
             else // This is an intermediate key, it must point to another JSON object
@@ -272,15 +269,491 @@ namespace gambit.config
                     JSON nextObject = currentObject.GetJSON( currentKey );
 
                     // Continue recursion to the next level
-                    FindPathRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
+                    FindStringRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
                 }
                 catch(Exception) // Catches if the value is not a JSON object
                 {
-                    OnFailed?.Invoke( "ConfigManager.cs FindPathRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
+                    OnFailed?.Invoke( "ConfigManager.cs FindStringRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
                 }
             }
 
-        } //END FindPathRecursive Method
+        } //END FindStringRecursive Method
+
+        #endregion
+
+        #region PUBLIC - GET NESTED PATH
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested path string. Returns it with any environment variables expanded, and like all strings parsed from TotalJSON, comes to us fully deserialized
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedPath
+        (
+            ConfigManagerSystem system,
+            string[ ] keys,
+            Action<string> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedPath() passed in ConfigManagerSystem object is null" );
+                return;
+            }
+
+            if(system.json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedPath() passed in ConfigManagerSystem.json object is null" );
+                return;
+            }
+
+            GetNestedPath( system.json, keys, OnSuccess, OnFailed );
+
+        } //END GetNestedPath Method
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested path string. Returns it fully deserialized with any environment variables expanded
+        /// </summary>
+        /// <param name="json">The root TotalJSON object to search within.</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedPath
+        (
+            JSON json,
+            string[ ] keys,
+            Action<string> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedPath() Error: Root JSON object is null." );
+                return;
+            }
+            if(keys == null || keys.Length == 0)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedPath() Error: Keys array is null or empty." );
+                return;
+            }
+
+            // --- Start Recursive Search ---
+            FindStringRecursive
+            ( 
+                json, 
+                keys, 
+                0, 
+                (string text)=>
+                {
+                    string expandedPath = Environment.ExpandEnvironmentVariables( text );
+                    OnSuccess?.Invoke( expandedPath );
+                    return;
+                }, 
+                OnFailed 
+            );
+
+        } //END GetNestedPath Method
+
+        #endregion
+
+        #region PUBLIC - GET NESTED INTEGER
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested integer.
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedInteger
+        (
+            ConfigManagerSystem system,
+            string[ ] keys,
+            Action<int> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedInteger() passed in ConfigManagerSystem object is null" );
+                return;
+            }
+
+            if(system.json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedInteger() passed in ConfigManagerSystem.json object is null" );
+                return;
+            }
+
+            GetNestedInteger( system.json, keys, OnSuccess, OnFailed );
+
+        } //END GetNestedInteger Method
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested integer.
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedInteger
+        (
+            JSON json,
+            string[ ] keys,
+            Action<int> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedInteger() Error: Root JSON object is null." );
+                return;
+            }
+            if(keys == null || keys.Length == 0)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedInteger() Error: Keys array is null or empty." );
+                return;
+            }
+
+            // --- Start Recursive Search ---
+            FindIntegerRecursive( json, keys, 0, OnSuccess, OnFailed );
+
+        } //END GetNestedInteger Method
+
+        /// <summary>
+        /// The private recursive function that traverses the JSON object in search of a integer.
+        /// </summary>
+        /// <param name="currentObject"></param>
+        /// <param name="keys"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-------------------------------------------------------------------//
+        private static void FindIntegerRecursive
+        (
+            JSON currentObject,
+            string[ ] keys,
+            int currentIndex,
+            Action<int> OnSuccess,
+            Action<string> OnFailed
+        )
+        //-------------------------------------------------------------------//
+        {
+            string currentKey = keys[ currentIndex ];
+
+            // --- Check if the current key exists ---
+            if(!currentObject.ContainsKey( currentKey ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs FindIntegerRecursive() Error: Key " + currentKey + " not found at the current level" );
+                return;
+            }
+
+            // --- Check if this is the last key in the path ---
+            bool isLastKey = (currentIndex == keys.Length - 1);
+
+            if(isLastKey)
+            {
+                // This should be the final value. Try to get it as a string.
+                try
+                {
+                    int value = currentObject.GetInt( currentKey );
+                    OnSuccess?.Invoke( value );
+                }
+                catch(Exception) // Catches if the value is not a integer
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindIntegerRecursive() Error: Final key " + currentKey + " does not point to a integer value." );
+                }
+            }
+            else // This is an intermediate key, it must point to another JSON object
+            {
+                try
+                {
+                    JSON nextObject = currentObject.GetJSON( currentKey );
+
+                    // Continue recursion to the next level
+                    FindIntegerRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
+                }
+                catch(Exception) // Catches if the value is not a JSON object
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindIntegerRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
+                }
+            }
+
+        } //END FindIntegerRecursive Method
+
+        #endregion
+
+        #region PUBLIC - GET NESTED FLOAT
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested float.
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedFloat
+        (
+            ConfigManagerSystem system,
+            string[ ] keys,
+            Action<float> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedFloat() passed in ConfigManagerSystem object is null" );
+                return;
+            }
+
+            if(system.json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedFloat() passed in ConfigManagerSystem.json object is null" );
+                return;
+            }
+
+            GetNestedFloat( system.json, keys, OnSuccess, OnFailed );
+
+        } //END GetNestedFloat Method
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested float.
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedFloat
+        (
+            JSON json,
+            string[ ] keys,
+            Action<float> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedFloat() Error: Root JSON object is null." );
+                return;
+            }
+            if(keys == null || keys.Length == 0)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedFloat() Error: Keys array is null or empty." );
+                return;
+            }
+
+            // --- Start Recursive Search ---
+            FindFloatRecursive( json, keys, 0, OnSuccess, OnFailed );
+
+        } //END GetNestedFloat Method
+
+        /// <summary>
+        /// The private recursive function that traverses the JSON object in search of a float.
+        /// </summary>
+        /// <param name="currentObject"></param>
+        /// <param name="keys"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-------------------------------------------------------------------//
+        private static void FindFloatRecursive
+        (
+            JSON currentObject,
+            string[ ] keys,
+            int currentIndex,
+            Action<float> OnSuccess,
+            Action<string> OnFailed
+        )
+        //-------------------------------------------------------------------//
+        {
+            string currentKey = keys[ currentIndex ];
+
+            // --- Check if the current key exists ---
+            if(!currentObject.ContainsKey( currentKey ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs FindFloatRecursive() Error: Key " + currentKey + " not found at the current level" );
+                return;
+            }
+
+            // --- Check if this is the last key in the path ---
+            bool isLastKey = (currentIndex == keys.Length - 1);
+
+            if(isLastKey)
+            {
+                // This should be the final value. Try to get it as a string.
+                try
+                {
+                    float value = currentObject.GetFloat( currentKey );
+                    OnSuccess?.Invoke( value );
+                }
+                catch(Exception) // Catches if the value is not a float
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindFloatRecursive() Error: Final key " + currentKey + " does not point to a float value." );
+                }
+            }
+            else // This is an intermediate key, it must point to another JSON object
+            {
+                try
+                {
+                    JSON nextObject = currentObject.GetJSON( currentKey );
+
+                    // Continue recursion to the next level
+                    FindFloatRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
+                }
+                catch(Exception) // Catches if the value is not a JSON object
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindFloatRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
+                }
+            }
+
+        } //END FindFloatRecursive Method
+
+        #endregion
+
+        #region PUBLIC - GET NESTED BOOLEAN
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested boolean.
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedBool
+        (
+            ConfigManagerSystem system,
+            string[ ] keys,
+            Action<bool> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedBool() passed in ConfigManagerSystem object is null" );
+                return;
+            }
+
+            if(system.json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedBool() passed in ConfigManagerSystem.json object is null" );
+                return;
+            }
+
+            GetNestedBool( system.json, keys, OnSuccess, OnFailed );
+
+        } //END GetNestedBool Method
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested bool.
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedBool
+        (
+            JSON json,
+            string[ ] keys,
+            Action<bool> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedBool() Error: Root JSON object is null." );
+                return;
+            }
+            if(keys == null || keys.Length == 0)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedBool() Error: Keys array is null or empty." );
+                return;
+            }
+
+            // --- Start Recursive Search ---
+            FindBoolRecursive( json, keys, 0, OnSuccess, OnFailed );
+
+        } //END GetNestedBool Method
+
+        /// <summary>
+        /// The private recursive function that traverses the JSON object in search of a boolean.
+        /// </summary>
+        /// <param name="currentObject"></param>
+        /// <param name="keys"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-------------------------------------------------------------------//
+        private static void FindBoolRecursive
+        (
+            JSON currentObject,
+            string[ ] keys,
+            int currentIndex,
+            Action<bool> OnSuccess,
+            Action<string> OnFailed
+        )
+        //-------------------------------------------------------------------//
+        {
+            string currentKey = keys[ currentIndex ];
+
+            // --- Check if the current key exists ---
+            if(!currentObject.ContainsKey( currentKey ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs FindBoolRecursive() Error: Key " + currentKey + " not found at the current level" );
+                return;
+            }
+
+            // --- Check if this is the last key in the path ---
+            bool isLastKey = (currentIndex == keys.Length - 1);
+
+            if(isLastKey)
+            {
+                // This should be the final value. Try to get it as a string.
+                try
+                {
+                    bool value = currentObject.GetBool( currentKey );
+                    OnSuccess?.Invoke( value );
+                }
+                catch(Exception) // Catches if the value is not a float
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindBoolRecursive() Error: Final key " + currentKey + " does not point to a bool value." );
+                }
+            }
+            else // This is an intermediate key, it must point to another JSON object
+            {
+                try
+                {
+                    JSON nextObject = currentObject.GetJSON( currentKey );
+
+                    // Continue recursion to the next level
+                    FindBoolRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
+                }
+                catch(Exception) // Catches if the value is not a JSON object
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindFloatRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
+                }
+            }
+
+        } //END FindBoolRecursive Method
 
         #endregion
 
@@ -394,9 +867,9 @@ namespace gambit.config
 #if EXT_TOTALJSON
 
         /// <summary>
-        /// Writes the file with new json data
+        /// Writes the file with new json data referenced by the path value of the ConfigManagerSystem. When successfull we will store the new json data in the system object for future reference.
         /// </summary>
-        /// <param name="system">The ConfigManagerSystem object passed back during Create. We will write to the path in the options object</param>
+        /// <param name="system">The ConfigManagerSystem object passed back during Create. If successfull, we will store the new json data in this object for future reference</param>
         /// <param name="json">The TotalJSON object you want to write to the file</param>
         //---------------------------------------------------------------------------------------------//
         public static void WriteFileContents
@@ -486,8 +959,11 @@ namespace gambit.config
 #if EXT_TOTALJSON
 
         /// <summary>
-        /// Reads a file and returns json data
+        /// Reads a file and returns json data. Overwrites the ConfigManagerSystem.json object when successfull
         /// </summary>
+        /// <param name="system"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
         //---------------------------------------------------------------------------------------------//
         public static void ReadFileContents
         (
@@ -521,6 +997,9 @@ namespace gambit.config
         /// <summary>
         /// Reads a file and returns json data
         /// </summary>
+        /// <param name="path"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
         //---------------------------------------------------------------------------------------------//
         public static void ReadFileContents
         (

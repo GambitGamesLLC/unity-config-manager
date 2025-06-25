@@ -44,7 +44,28 @@ namespace gambit.config
         /// <summary>
         /// The keys we want to look through our JSON for. The last value in this array is the final key that should contain the string we're looking for
         /// </summary>
-        public string[ ] keysToFindStringInJSON = { "app", "path" };
+        public string[ ] keysToFindLongNameValueInJSON = { "app", "longname" };
+
+        /// <summary>
+        /// The keys we want to look through our JSON for. The last value in this array is the final key that should contain the string we're looking for
+        /// </summary>
+        public string[ ] keysToFindShortNameValueInJSON = { "app", "shortname" };
+
+        /// <summary>
+        /// The keys we want to look through our JSON for. The last value in this array is the final key that should contain the string we're looking for
+        /// </summary>
+        public string[ ] keysToFindPathValueInJSON = { "app", "path" };
+
+        /// <summary>
+        /// The keys we want to look through our JSON for. The last value in this array is the final key that should contain the value we're looking for
+        /// </summary>
+        public string[ ] keysToFindAddressValueInJSON = { "communication", "address" };
+
+        /// <summary>
+        /// The keys we want to look through our JSON for. The last value in this array is the final key that should contain the value we're looking for
+        /// </summary>
+        public string[ ] keysToFindPortValueInJSON = { "communication", "port" };
+
 
         #endregion
 
@@ -57,6 +78,10 @@ namespace gambit.config
         public void Start()
         //----------------------------------//
         {
+#if !EXT_TOTALJSON
+            Debug.LogError( "Demo.cs Start() Missing 'EXT_TOTALJSON' scripting define symbol in project settings." );
+            return;
+#else
             //Create a ConfigManager
             ConfigManager.Create
             (
@@ -86,21 +111,113 @@ namespace gambit.config
                                 ConfigManager.Log( system );
                             }
 
-                            //Pull the App/Path variable from the data to check its integrity
+                            //Pull the 'app/longname' variable from the data to check its integrity
                             ConfigManager.GetNestedString
                             (
                                 system,
-                                keysToFindStringInJSON,
-                                
+                                keysToFindLongNameValueInJSON,
+
                                 //OnSuccess
-                                (string path ) => 
+                                ( string text ) =>
                                 {
                                     if(debug)
                                     {
-                                        Debug.Log( "Demo.cs Start found path = " + path );
+                                        Debug.Log( "Demo.cs Start() found longname = " + text );
+                                    }
+                                },
+                                ( string error ) =>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.LogError( error );
+                                    }
+                                }
+                            );
+
+                            //Pull the 'app/shortname' variable from the data to check its integrity
+                            ConfigManager.GetNestedString
+                            (
+                                system,
+                                keysToFindShortNameValueInJSON,
+
+                                //OnSuccess
+                                ( string text ) =>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.Log( "Demo.cs Start() found shortname = " + text );
+                                    }
+                                },
+                                ( string error ) =>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.LogError( error );
+                                    }
+                                }
+                            );
+
+                            //Pull the 'app/path' variable from the data to check its integrity
+                            ConfigManager.GetNestedPath
+                            (
+                                system,
+                                keysToFindPathValueInJSON,
+                                
+                                //OnSuccess
+                                (string text ) => 
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.Log( "Demo.cs Start() found path = " + text );
                                     }
                                 },
                                 (string error)=>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.LogError( error );
+                                    }
+                                }
+                            );
+
+                            //Pull the 'communication/address' variable from the data to check its integrity
+                            ConfigManager.GetNestedString
+                            (
+                                system,
+                                keysToFindAddressValueInJSON,
+
+                                //OnSuccess
+                                ( string text ) =>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.Log( "Demo.cs Start() found address = " + text );
+                                    }
+                                },
+                                ( string error ) =>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.LogError( error );
+                                    }
+                                }
+                            );
+
+                            //Pull the 'communication/port' variable from the data to check its integrity
+                            ConfigManager.GetNestedInteger
+                            (
+                                system,
+                                keysToFindPortValueInJSON,
+
+                                //OnSuccess
+                                ( int value ) =>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.Log( "Demo.cs Start() found port = " + value );
+                                    }
+                                },
+                                ( string error ) =>
                                 {
                                     if(debug)
                                     {
@@ -123,6 +240,7 @@ namespace gambit.config
                 //OnFailed
                 (string error)=> { if(debug) Debug.LogError( error ); }
             );
+#endif
 
         } //END Start
 

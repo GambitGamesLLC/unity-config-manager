@@ -14,6 +14,8 @@ using UnityEngine;
 
 #if GAMBIT_SINGLETON
 using gambit.singleton;
+using UnityEngine.Rendering.VirtualTexturing;
+
 #else
 /// <summary>
 /// Fallback Singleton base class if GAMBIT_SINGLETON is not defined.
@@ -146,6 +148,139 @@ namespace gambit.config
             OnSuccess?.Invoke( system );
 
         } //END Create Method
+
+        #endregion
+
+        #region PUBLIC - GET NESTED STRING
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested string. Returns it fully deserialized with any environment variables expanded
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedString
+        (
+            ConfigManagerSystem system,
+            string[ ] keys,
+            Action<string> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedString() passed in ConfigManagerSystem object is null" );
+                return;
+            }
+
+            if(system.json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedString() passed in ConfigManagerSystem.json object is null" );
+                return;
+            }
+
+            GetNestedString( system.json, keys, OnSuccess, OnFailed );
+
+        } //END GetNestedString Method
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested string. Returns it fully deserialized with any environment variables expanded
+        /// </summary>
+        /// <param name="json">The root TotalJSON object to search within.</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedString
+        ( 
+            JSON json, 
+            string[ ] keys, 
+            Action<string> OnSuccess, 
+            Action<string> OnFailed 
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            // --- Input Validation ---
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedString() Error: Root JSON object is null." );
+                return;
+            }
+            if(keys == null || keys.Length == 0)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedString() Error: Keys array is null or empty." );
+                return;
+            }
+
+            // --- Start Recursive Search ---
+            FindPathRecursive( json, keys, 0, OnSuccess, OnFailed );
+
+        } //END GetNestedString Method
+
+        /// <summary>
+        /// The private recursive function that traverses the JSON object.
+        /// </summary>
+        /// <param name="currentObject"></param>
+        /// <param name="keys"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-------------------------------------------------------------------//
+        private static void FindPathRecursive
+        ( 
+            JSON currentObject, 
+            string[ ] keys, 
+            int currentIndex, 
+            Action<string> OnSuccess, 
+            Action<string> OnFailed 
+        )
+        //-------------------------------------------------------------------//
+        {
+            string currentKey = keys[ currentIndex ];
+
+            // --- Check if the current key exists ---
+            if(!currentObject.ContainsKey( currentKey ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs FindPathRecursive() Error: Key " + currentKey + " not found at the current level" );
+                return;
+            }
+
+            // --- Check if this is the last key in the path ---
+            bool isLastKey = (currentIndex == keys.Length - 1);
+
+            if(isLastKey)
+            {
+                // This should be the final value. Try to get it as a string.
+                try
+                {
+                    string rawPath = currentObject.GetString( currentKey );
+                    string expandedPath = Environment.ExpandEnvironmentVariables( rawPath );
+                    OnSuccess?.Invoke( expandedPath );
+                }
+                catch(Exception) // Catches if the value is not a string (e.g., an object or number)
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindPathRecursive() Error: Final key " + currentKey + " does not point to a string value." );
+                }
+            }
+            else // This is an intermediate key, it must point to another JSON object
+            {
+                try
+                {
+                    JSON nextObject = currentObject.GetJSON( currentKey );
+
+                    // Continue recursion to the next level
+                    FindPathRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
+                }
+                catch(Exception) // Catches if the value is not a JSON object
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindPathRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
+                }
+            }
+
+        } //END FindPathRecursive Method
 
         #endregion
 
@@ -866,6 +1001,27 @@ namespace gambit.config
             Debug.Log( system.json.CreatePrettyString() );
         
         } //END Log Method
+
+        #endregion
+
+        #region PUBLIC - DESTROY
+
+        /// <summary>
+        /// Destroys a ConfigManagerSystem object, preparing the data for cleanup
+        /// </summary>
+        /// <param name="system"></param>
+        //--------------------------------------------------------------//
+        public static void Destroy( ConfigManagerSystem system )
+        //--------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                return;
+            }
+
+            system = null;
+
+        } //END Destroy Method
 
         #endregion
 

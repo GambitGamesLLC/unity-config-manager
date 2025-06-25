@@ -41,6 +41,11 @@ namespace gambit.config
         /// </summary>
         public string backupPathAndNameInResources = "config";
 
+        /// <summary>
+        /// The keys we want to look through our JSON for. The last value in this array is the final key that should contain the string we're looking for
+        /// </summary>
+        public string[ ] keysToFindStringInJSON = { "app", "path" };
+
         #endregion
 
         #region PUBLIC - START
@@ -80,6 +85,30 @@ namespace gambit.config
                                 Debug.Log( "Demo.cs Start() Replaced file using backup in resources" );
                                 ConfigManager.Log( system );
                             }
+
+                            //Pull the App/Path variable from the data to check its integrity
+                            ConfigManager.GetNestedString
+                            (
+                                system,
+                                keysToFindStringInJSON,
+                                
+                                //OnSuccess
+                                (string path ) => 
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.Log( "Demo.cs Start found path = " + path );
+                                    }
+                                },
+                                (string error)=>
+                                {
+                                    if(debug)
+                                    {
+                                        Debug.LogError( error );
+                                    }
+                                }
+                            );
+
                         },
 
                         //OnFailed

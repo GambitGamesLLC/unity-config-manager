@@ -11,6 +11,7 @@
 using System;
 using System.IO;
 using UnityEngine;
+using System.Text.RegularExpressions;
 
 #if GAMBIT_SINGLETON
 using gambit.singleton;
@@ -1475,6 +1476,58 @@ namespace gambit.config
             Debug.Log( system.json.CreatePrettyString() );
         
         } //END Log Method
+
+        #endregion
+
+        #region PUBLIC - UN-ESCAPE & EXPAND PATH
+
+        /// <summary>
+        /// Converts the path to expand environment variables, also unescapes character sequences like \\ or \n.
+        /// This version of the function also stores the result in the path variable in the options object
+        /// </summary>
+        //---------------------------------------------//
+        public static string UnescapeAndExpandPath( ConfigManagerSystem system )
+        //---------------------------------------------//
+        {
+            system.options.path = UnescapeAndExpandPath( system.options.path );
+
+            return system.options.path;
+
+        } //END UnescapeAndExpandPath Method
+
+        /// <summary>
+        /// Converts the path to expand environment variables, also unescapes character sequences like \\ or \n
+        /// </summary>
+        //---------------------------------------------//
+        public static string UnescapeAndExpandPath( string path )
+        //---------------------------------------------//
+        {
+            if(string.IsNullOrEmpty( path ))
+            {
+                Debug.LogError( "ConfigManager.cs UnescapeAndExpandPath() path is null or empty." );
+                return path;
+            }
+
+            //Unescape the string
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
+#pragma warning disable CS0168
+            try
+            {
+                path = Regex.Unescape( path );
+            }
+            catch(Exception e)
+            {
+                //Debug.LogWarning( e.ToString() );
+            }
+#pragma warning restore CS0168
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
+
+            //Expand any environment variables for the configPath
+            path = System.Environment.ExpandEnvironmentVariables( path );
+
+            return path;
+
+        } //END UnescapeAndExpandPath Method
 
         #endregion
 

@@ -78,11 +78,6 @@ namespace gambit.config
             /// </summary>
             public bool showDebugLogs = true;
 
-            /// <summary>
-            /// Path to the config file
-            /// </summary>
-            public string path = "";
-
         } //END Options Class
 
         #endregion
@@ -102,12 +97,27 @@ namespace gambit.config
             /// </summary>
             public Options options;
 
+            /// <summary>
+            /// Path to the config file
+            /// </summary>
+            public string path = "";
+
 #if EXT_TOTALJSON
             /// <summary>
             /// The JSON contained within the config file
             /// </summary>
             public JSON json;
 #endif
+
+            /// <summary>
+            /// The version of the configuration this system and data are representing
+            /// </summary>
+            public int version = -99;
+
+            /// <summary>
+            /// The datetime of when this version of the configuration file was created
+            /// </summary>
+            public DateTime timestamp = DateTime.MinValue;
 
         } //END ConfigManagerSystem Class
 
@@ -136,9 +146,6 @@ namespace gambit.config
             ConfigManagerSystem system = new ConfigManagerSystem();
             system.options = options;
             
-            if(system.options.path == "")
-                OnFailed.Invoke( "ConfigManager.cs Create() path is empty" );
-
             OnSuccess?.Invoke( system );
 
         } //END Create Method
@@ -357,6 +364,139 @@ namespace gambit.config
             );
 
         } //END GetNestedPath Method
+
+        #endregion
+
+        #region PUBLIC - GET NESTED DATETIME
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested datetime string and returns it as a DateTime object
+        /// </summary>
+        /// <param name="system">The ConfigManagerSystem object with a json data contained within</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedDateTime
+        (
+            ConfigManagerSystem system,
+            string[ ] keys,
+            Action<DateTime> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedDateTime() passed in ConfigManagerSystem object is null" );
+                return;
+            }
+
+            if(system.json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedDateTime() passed in ConfigManagerSystem.json object is null" );
+                return;
+            }
+
+            GetNestedDateTime( system.json, keys, OnSuccess, OnFailed );
+
+        } //END GetNestedDateTime Method
+
+        /// <summary>
+        /// Public method to start the recursive search for a nested datetime.
+        /// </summary>
+        /// <param name="json">The root TotalJSON object to search within.</param>
+        /// <param name="keys">An array of keys representing the path to the desired value.</param>
+        /// <param name="OnSuccess">Callback invoked with the processed string if found.</param>
+        /// <param name="OnFailed">Callback invoked with an error message if not found.</param>
+        //------------------------------------------------------------------------------------------------//
+        public static void GetNestedDateTime
+        (
+            JSON json,
+            string[ ] keys,
+            Action<DateTime> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+
+            if(json == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedDateTime() Error: Root JSON object is null." );
+                return;
+            }
+            if(keys == null || keys.Length == 0)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs GetNestedDateTime() Error: Keys array is null or empty." );
+                return;
+            }
+
+            // --- Start Recursive Search ---
+            FindDateTimeRecursive( json, keys, 0, OnSuccess, OnFailed );
+
+        } //END GetNestedDateTime Method
+
+        /// <summary>
+        /// The private recursive function that traverses the JSON object in search of a Datetime.
+        /// </summary>
+        /// <param name="currentObject"></param>
+        /// <param name="keys"></param>
+        /// <param name="currentIndex"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-------------------------------------------------------------------//
+        private static void FindDateTimeRecursive
+        (
+            JSON currentObject,
+            string[ ] keys,
+            int currentIndex,
+            Action<DateTime> OnSuccess,
+            Action<string> OnFailed
+        )
+        //-------------------------------------------------------------------//
+        {
+            string currentKey = keys[ currentIndex ];
+
+            // --- Check if the current key exists ---
+            if(!currentObject.ContainsKey( currentKey ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs FindDateTimeRecursive() Error: Key " + currentKey + " not found at the current level" );
+                return;
+            }
+
+            // --- Check if this is the last key in the path ---
+            bool isLastKey = (currentIndex == keys.Length - 1);
+
+            if(isLastKey)
+            {
+                // This should be the final value. Try to get it as a string.
+                try
+                {
+                    string text = currentObject.GetString( currentKey );
+                    DateTime dateTime = DateTime.Parse( text );
+                    OnSuccess?.Invoke( dateTime );
+                }
+                catch(Exception) // Catches if the value is not a string (e.g., an object or number)
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindDateTimeRecursive() Error: Final key " + currentKey + " does not point to a string/datetime value." );
+                }
+            }
+            else // This is an intermediate key, it must point to another JSON object
+            {
+                try
+                {
+                    JSON nextObject = currentObject.GetJSON( currentKey );
+
+                    // Continue recursion to the next level
+                    FindDateTimeRecursive( nextObject, keys, currentIndex + 1, OnSuccess, OnFailed );
+                }
+                catch(Exception) // Catches if the value is not a JSON object
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs FindDateTimeRecursive() Error: Intermediate key " + currentKey + " does not point to a nested object." );
+                }
+            }
+
+        } //END FindDateTimeRecursive Method
 
         #endregion
 
@@ -768,7 +908,7 @@ namespace gambit.config
             if(system == null)
                 return false;
 
-            return DoesFileExist( system.options.path );
+            return DoesFileExist( system.path );
 
         } //END DoesFileExist Method
 
@@ -819,7 +959,7 @@ namespace gambit.config
                 return;
             }
 
-            CreateFile( system.options.path, OnSuccess, OnFailed );
+            CreateFile( system.path, OnSuccess, OnFailed );
 
         } //END CreateFile Method
 
@@ -882,7 +1022,7 @@ namespace gambit.config
 
             WriteFileContents
             ( 
-                system.options.path, 
+                system.path, 
                 json,
                 () => 
                 {
@@ -977,12 +1117,13 @@ namespace gambit.config
 
             ReadFileContents
             ( 
-                system.options.path, 
+                system.path, 
 
                 (JSON json)=>
                 {
                     system.json = json;
-                    OnSuccess?.Invoke( json );
+
+                    ReadConfigInfoFromData( system, OnSuccess, OnFailed );
                 }, 
                 
                 OnFailed 
@@ -1030,6 +1171,221 @@ namespace gambit.config
 
         } //END ReadFileContents Method
 
+        /// <summary>
+        /// Reads the data and sets the version number and datetime on the ConfigManagerSystem if the values are found
+        /// </summary>
+        /// <param name="system"></param>
+        /// <param name="json"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //-----------------------------------------------//
+        private static void ReadConfigInfoFromData
+        //-----------------------------------------------//
+        (
+            ConfigManagerSystem system,
+            Action<JSON> OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            //Store the version number, then look for the timestamp
+            StoreVersionNumberFromData
+            (
+                system,
+                ()=>
+                {
+                    OnSuccess?.Invoke( system.json );
+                },
+                OnFailed
+            );
+
+        } //END ReadConfigInfoFromData
+
+        /// <summary>
+        /// If we find the 'version' value in the 'info' object, store it in the ConfigManagerSystem object
+        /// </summary>
+        /// <param name="system"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //------------------------------------------------------//
+        private static void StoreVersionNumberFromData
+        //------------------------------------------------------//
+        (
+            ConfigManager.ConfigManagerSystem system,
+            Action OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            GetNestedInteger
+            (
+                system,
+                new string[ ] { "info", "version" },
+                ( int value ) =>
+                {
+                    system.version = value;
+
+                    StoreTimestampFromData
+                    (
+                        system,
+                        OnSuccess,
+                        OnFailed
+                    );
+                },
+                OnFailed
+            );
+
+        } //END StoreVersionNumberFromData Method
+
+        /// <summary>
+        /// If we find the 'timestamp' value in the 'info' object, store it in the ConfigManagerSystem object
+        /// </summary>
+        /// <param name="system"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //----------------------------------------------//
+        private static void StoreTimestampFromData
+        //----------------------------------------------//
+        (
+            ConfigManager.ConfigManagerSystem system,
+            Action OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            GetNestedDateTime
+            (
+                system,
+                new string[ ] { "info", "timestamp" },
+                ( DateTime value ) =>
+                {
+                    system.timestamp = value;
+
+                    StorePathFromData
+                    (
+                        system,
+                        OnSuccess,
+                        OnFailed
+                    );
+                },
+                OnFailed
+            );
+
+        } //END StoreTimestampFromData Method
+
+        /// <summary>
+        /// If we find the 'path' value in the 'info' object, store it in the ConfigManagerSystem object
+        /// </summary>
+        /// <param name="system"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //----------------------------------------------//
+        private static void StorePathFromData
+        //----------------------------------------------//
+        (
+            ConfigManager.ConfigManagerSystem system,
+            Action OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            GetNestedString
+            (
+                system,
+                new string[ ] { "info", "path" },
+                ( string value ) =>
+                {
+                    system.path = value;
+
+                    OnSuccess?.Invoke();
+                },
+                OnFailed
+            );
+
+        } //END StorePathFromData Method
+
+#endif
+
+        #endregion
+
+        #region PUBLIC - READ FILE CONTENTS FROM RESOURCES
+
+#if EXT_TOTALJSON
+
+        /// <summary>
+        /// Returns the JSON object from a config file located in the resources folder.
+        /// In addition, using this version of the function will fill in the 'json', 'version' and 'timestamp' variables for your ConfigManagerSystem object
+        /// </summary>
+        /// <param name="configFilePathAndNameInResources"></param>
+        /// <returns></returns>
+        //------------------------------------------------------------------------------------------------//
+        public static void ReadFileContentsFromResources
+        (
+            ConfigManagerSystem system,
+            string configFilePathAndNameInResources,
+            Action<JSON> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReadFileContentsFromResources() passed in ConfigManagerSystem object is null" );
+            }
+
+            ReadFileContentsFromResources
+            (
+                configFilePathAndNameInResources,
+                (JSON json)=>
+                {
+                    system.json = json;
+
+                    ReadConfigInfoFromData( system, OnSuccess, OnFailed );
+                },
+                OnFailed
+            );
+
+        } //END ReadFileContentsFromResources
+
+        /// <summary>
+        /// Returns the JSON object from a config file located in the resources folder
+        /// </summary>
+        /// <param name="configFilePathAndNameInResources"></param>
+        /// <returns></returns>
+        //------------------------------------------------------------------------------------------------//
+        public static void ReadFileContentsFromResources
+        (
+            string configFilePathAndNameInResources,
+            Action<JSON> OnSuccess,
+            Action<string> OnFailed
+        )
+        //------------------------------------------------------------------------------------------------//
+        {
+            if(string.IsNullOrEmpty( configFilePathAndNameInResources ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReadFileContentsFromResources" );
+            }
+
+            try
+            {
+                UnityEngine.Object obj = Resources.Load( configFilePathAndNameInResources );
+
+                if(obj == null)
+                {
+                    OnFailed?.Invoke( "ConfigManager.cs ReadFileContentsFromResources() unable to load resources to object, check if the file and the value of configFilePathAndNameInResources match up = " + configFilePathAndNameInResources );
+                    return;
+                }
+
+                string jsonAsString = obj.ToString();
+
+                JSON json = JSON.ParseString( jsonAsString );
+
+                OnSuccess?.Invoke( json );
+                return;
+            }
+            catch( Exception e ) 
+            {
+                OnFailed?.Invoke( "ConfigManager.cs ReplaceFileUsingResources() error = " + e.ToString() );
+            }
+
+        } //END ReadFileContentsFromResources
+
 #endif
 
         #endregion
@@ -1062,13 +1418,13 @@ namespace gambit.config
                 return;
             }
 
-            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            if(system.path == null || (system.path != null && system.path == ""))
             {
                 OnFailed?.Invoke( "ConfigManager.cs DestroyFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
                 return;
             }
 
-            DestroyFile( system.options.path, OnSuccess, OnFailed );
+            DestroyFile( system.path, OnSuccess, OnFailed );
 
         } //END DestroyFile Method
 
@@ -1149,7 +1505,7 @@ namespace gambit.config
                 return;
             }
 
-            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            if(system.path == null || (system.path != null && system.path == ""))
             {
                 OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
                 return;
@@ -1157,13 +1513,12 @@ namespace gambit.config
 
             ReplaceFileUsingResources
             (
-                system.options.path,
+                system.path,
                 replacementFilePathAndName,
                 (JSON json)=>
                 {
                     system.json = json;
-                    OnSuccess?.Invoke( json );
-                    return;
+                    ReadConfigInfoFromData( system, OnSuccess, OnFailed );
                 },
                 OnFailed
             );
@@ -1253,7 +1608,7 @@ namespace gambit.config
                 return;
             }
 
-            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            if(system.path == null || (system.path != null && system.path == ""))
             {
                 OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
                 return;
@@ -1261,13 +1616,13 @@ namespace gambit.config
 
             ReplaceFile
             ( 
-                system.options.path,
+                system.path,
                 replacementFilePath,
                 
                 (JSON json)=>
                 {
                     system.json = json;
-                    OnSuccess?.Invoke( json );
+                    ReadConfigInfoFromData( system, OnSuccess, OnFailed );
                 }, 
                 
                 OnFailed 
@@ -1344,7 +1699,7 @@ namespace gambit.config
         (
             ConfigManagerSystem system,
             JSON json,
-            Action OnSuccess = null,
+            Action<JSON> OnSuccess = null,
             Action<string> OnFailed = null
         )
         {
@@ -1361,7 +1716,7 @@ namespace gambit.config
                 return;
             }
 
-            if(system.options.path == null || (system.options.path != null && system.options.path == ""))
+            if(system.path == null || (system.path != null && system.path == ""))
             {
                 OnFailed?.Invoke( "ConfigManager.cs ReplaceFile() passed in ConfigManagerSystem.options.path object is null or empty, unable to continue" );
                 return;
@@ -1369,12 +1724,12 @@ namespace gambit.config
 
             ReplaceFile
             ( 
-                system.options.path, 
+                system.path, 
                 json,
                 (JSON json) => 
                 {
                     system.json = json;
-                    OnSuccess?.Invoke();
+                    ReadConfigInfoFromData( system, OnSuccess, OnFailed );
                 }, 
                 OnFailed 
             );
@@ -1489,9 +1844,9 @@ namespace gambit.config
         public static string UnescapeAndExpandPath( ConfigManagerSystem system )
         //---------------------------------------------//
         {
-            system.options.path = UnescapeAndExpandPath( system.options.path );
+            system.path = UnescapeAndExpandPath( system.path );
 
-            return system.options.path;
+            return system.path;
 
         } //END UnescapeAndExpandPath Method
 
@@ -1528,6 +1883,90 @@ namespace gambit.config
             return path;
 
         } //END UnescapeAndExpandPath Method
+
+        #endregion
+
+        #region PUBLIC - IS VERSION HIGHER
+
+        /// <summary>
+        /// Given two ConfigManagerSystems, returns the one that has a later version number
+        /// </summary>
+        /// <param name="currentSystem"></param>
+        /// <param name="compareToSystem"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //------------------------------------------//
+        public static void IsVersionHigher
+        //------------------------------------------//
+        (
+            ConfigManagerSystem system,
+            ConfigManagerSystem comparison,
+            Action<ConfigManagerSystem> OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs IsVersionHigher() passed in system object is null" );
+            }
+
+            if(comparison == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs IsVersionHigher() passed in comparison system object is null" );
+            }
+
+            if(system.version < comparison.version)
+            {
+                OnSuccess?.Invoke( comparison );
+            }
+            else
+            {
+                OnSuccess?.Invoke( system );
+            }
+
+        } //END IsVersionHigher Method
+
+        #endregion
+
+        #region PUBLIC - IS TIMESTAMP NEWER
+
+        /// <summary>
+        /// Given two ConfigManagerSystems, returns the one that has a newer timestamp
+        /// </summary>
+        /// <param name="currentSystem"></param>
+        /// <param name="compareToSystem"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //------------------------------------------//
+        public static void IsTimestampNewer
+        //------------------------------------------//
+        (
+            ConfigManagerSystem system,
+            ConfigManagerSystem comparison,
+            Action<ConfigManagerSystem> OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            if(system == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs IsTimestampNewer() passed in system object is null" );
+            }
+
+            if(comparison == null)
+            {
+                OnFailed?.Invoke( "ConfigManager.cs IsTimestampNewer() passed in comparison system object is null" );
+            }
+
+            if(system.timestamp < comparison.timestamp)
+            {
+                OnSuccess?.Invoke( comparison );
+            }
+            else
+            {
+                OnSuccess?.Invoke( system );
+            }
+
+        } //END IsTimestampNewer Method
 
         #endregion
 

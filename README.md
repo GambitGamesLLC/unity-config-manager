@@ -36,11 +36,11 @@ This is the recommended installation method.
 2.  Click the **'+'** button in the top-left corner and select **"Add package from git URL..."**
 3.  Enter the following URL:
     ```
-    [https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package](https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package)
+    https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package
     ```
 4.  To install a specific version, append the version tag to the URL:
     ```
-    [https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package#v1.0.0](https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package#v1.0.0)
+    https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package#v1.0.0
     ```
 
 **Alternatively, you can manually edit your project's `Packages/manifest.json` file:**
@@ -48,7 +48,7 @@ This is the recommended installation method.
 ```json
 {
   "dependencies": {
-    "com.gambit.config": "[https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package](https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package)",
+    "com.gambit.config": "https://github.com/GambitGamesLLC/unity-config-manager.git?path=Assets/Plugins/Package",
     ...
   }
 }

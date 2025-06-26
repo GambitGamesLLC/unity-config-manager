@@ -82,11 +82,6 @@ namespace gambit.config
             /// </summary>
             public string path = "";
 
-            /// <summary>
-            /// Generates a blank config file if missing
-            /// </summary>
-            public bool createIfMissing = false;
-
         } //END Options Class
 
         #endregion

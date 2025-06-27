@@ -2133,8 +2133,6 @@ namespace gambit.config
         {
             localSystem.path = pathWithFilenameAndExtensionToConfigFileOnLocal;
 
-            Debug.Log( "LoadLocalConfig() start ... localSystem.path = " + localSystem.path );
-
             ReadFileContents
             (
                 localSystem,

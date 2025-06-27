@@ -63,6 +63,20 @@ namespace gambit.config
 
         #endregion
 
+        #region PRIVATE - VARIABLES
+
+        /// <summary>
+        /// Temporary object reference
+        /// </summary>
+        private static ConfigManagerSystem localSystem;
+
+        /// <summary>
+        /// Temporary object reference
+        /// </summary>
+        public static ConfigManagerSystem resourcesSystem;
+
+        #endregion
+
         #region PUBLIC - CREATION OPTIONS
 
         /// <summary>
@@ -1201,7 +1215,7 @@ namespace gambit.config
         } //END ReadConfigInfoFromData
 
         /// <summary>
-        /// If we find the 'version' value in the 'info' object, store it in the ConfigManagerSystem object
+        /// If we find the 'version' value in the 'config' object, store it in the ConfigManagerSystem object
         /// </summary>
         /// <param name="system"></param>
         /// <param name="OnSuccess"></param>
@@ -1218,7 +1232,7 @@ namespace gambit.config
             GetNestedInteger
             (
                 system,
-                new string[ ] { "info", "version" },
+                new string[ ] { "config", "version" },
                 ( int value ) =>
                 {
                     system.version = value;
@@ -1236,7 +1250,7 @@ namespace gambit.config
         } //END StoreVersionNumberFromData Method
 
         /// <summary>
-        /// If we find the 'timestamp' value in the 'info' object, store it in the ConfigManagerSystem object
+        /// If we find the 'timestamp' value in the 'config' object, store it in the ConfigManagerSystem object
         /// </summary>
         /// <param name="system"></param>
         /// <param name="OnSuccess"></param>
@@ -1253,7 +1267,7 @@ namespace gambit.config
             GetNestedDateTime
             (
                 system,
-                new string[ ] { "info", "timestamp" },
+                new string[ ] { "config", "timestamp" },
                 ( DateTime value ) =>
                 {
                     system.timestamp = value;
@@ -1271,7 +1285,7 @@ namespace gambit.config
         } //END StoreTimestampFromData Method
 
         /// <summary>
-        /// If we find the 'path' value in the 'info' object, store it in the ConfigManagerSystem object
+        /// If we find the 'path' value in the 'config' object, store it in the ConfigManagerSystem object
         /// </summary>
         /// <param name="system"></param>
         /// <param name="OnSuccess"></param>
@@ -1285,10 +1299,10 @@ namespace gambit.config
             Action<string> OnFailed
         )
         {
-            GetNestedString
+            GetNestedPath
             (
                 system,
-                new string[ ] { "info", "path" },
+                new string[ ] { "config", "path" },
                 ( string value ) =>
                 {
                     system.path = value;
@@ -1886,89 +1900,292 @@ namespace gambit.config
 
         #endregion
 
-        #region PUBLIC - IS VERSION HIGHER
+        #region PUBLIC - GET NEWER SYSTEM
 
         /// <summary>
-        /// Given two ConfigManagerSystems, returns the one that has a later version number
+        /// Given two ConfigManagerSystems, returns the one that has a newer version number and timestamp
         /// </summary>
-        /// <param name="currentSystem"></param>
-        /// <param name="compareToSystem"></param>
+        /// <param name="system1"></param>
+        /// <param name="system2"></param>
         /// <param name="OnSuccess"></param>
         /// <param name="OnFailed"></param>
         //------------------------------------------//
-        public static void IsVersionHigher
+        public static void GetNewerSystem
         //------------------------------------------//
         (
-            ConfigManagerSystem system,
-            ConfigManagerSystem comparison,
+            ConfigManagerSystem system1,
+            ConfigManagerSystem system2,
             Action<ConfigManagerSystem> OnSuccess,
             Action<string> OnFailed
         )
         {
-            if(system == null)
+            if(system1 == null)
             {
-                OnFailed?.Invoke( "ConfigManager.cs IsVersionHigher() passed in system object is null" );
+                OnFailed?.Invoke( "ConfigManager.cs GetNewerSystem() passed in system1 object is null" );
             }
 
-            if(comparison == null)
+            if(system2 == null)
             {
-                OnFailed?.Invoke( "ConfigManager.cs IsVersionHigher() passed in comparison system object is null" );
+                OnFailed?.Invoke( "ConfigManager.cs GetNewerSystem() passed in system2 object is null" );
             }
 
-            if(system.version < comparison.version)
+
+            if(system1.version < system2.version)
             {
-                OnSuccess?.Invoke( comparison );
+                //System 1 has an older version number
+                OnSuccess?.Invoke( system2 );
             }
-            else
+            else if(system1.version > system2.version)
             {
-                OnSuccess?.Invoke( system );
-            }
-
-        } //END IsVersionHigher Method
-
-        #endregion
-
-        #region PUBLIC - IS TIMESTAMP NEWER
-
-        /// <summary>
-        /// Given two ConfigManagerSystems, returns the one that has a newer timestamp
-        /// </summary>
-        /// <param name="currentSystem"></param>
-        /// <param name="compareToSystem"></param>
-        /// <param name="OnSuccess"></param>
-        /// <param name="OnFailed"></param>
-        //------------------------------------------//
-        public static void IsTimestampNewer
-        //------------------------------------------//
-        (
-            ConfigManagerSystem system,
-            ConfigManagerSystem comparison,
-            Action<ConfigManagerSystem> OnSuccess,
-            Action<string> OnFailed
-        )
-        {
-            if(system == null)
-            {
-                OnFailed?.Invoke( "ConfigManager.cs IsTimestampNewer() passed in system object is null" );
-            }
-
-            if(comparison == null)
-            {
-                OnFailed?.Invoke( "ConfigManager.cs IsTimestampNewer() passed in comparison system object is null" );
-            }
-
-            if(system.timestamp < comparison.timestamp)
-            {
-                OnSuccess?.Invoke( comparison );
+                //System 2 has a older version number
+                OnSuccess?.Invoke( system1 );
             }
             else
             {
-                OnSuccess?.Invoke( system );
+                //Version numbers are the same, compare timestamps
+                if(system1.timestamp < system2.timestamp)
+                {
+                    //System 1 has an older timestamp
+                    OnSuccess?.Invoke( system2 );
+                }
+                else if(system1.timestamp > system2.timestamp)
+                {
+                    //System2 has an older timestamp
+                    OnSuccess?.Invoke( system1 );
+                }
+                else
+                {
+                    //Both are equal, return system1
+                    OnSuccess?.Invoke( system1 );
+                }
             }
 
         } //END IsTimestampNewer Method
 
         #endregion
+
+        #region PUBLIC - IS NEWER?
+
+        /// <summary>
+        /// Returns true if the first system passed in is newer than the second system
+        /// </summary>
+        /// <param name="system1"></param>
+        /// <param name="system2"></param>
+        /// <returns></returns>
+        //-----------------------------------------//
+        public static bool IsNewer
+        //-----------------------------------------//
+        (
+            ConfigManagerSystem system1,
+            ConfigManagerSystem system2
+        )
+        {
+
+            if(system1.version < system2.version)
+            {
+                //System 1 has an older version number
+                return false;
+            }
+            else if(system1.version > system2.version)
+            {
+                //System 2 has a older version number
+                return true;
+            }
+            else
+            {
+                //Version numbers are the same, compare timestamps
+                if(system1.timestamp < system2.timestamp)
+                {
+                    //System 1 has an older timestamp
+                    return false;
+                }
+                else if(system1.timestamp > system2.timestamp)
+                {
+                    //System2 has an older timestamp
+                    return true;
+                }
+                else
+                {
+                    //Both are equal, return system1
+                    return false;
+                }
+            }
+
+        } //END IsNewer Method
+
+        #endregion
+
+        #region PUBLIC - UPDATE LOCAL DATA WITH INFO FROM RESOURCES AND RETURN LOCAL SYSTEM
+
+#if EXT_TOTALJSON
+
+        /// <summary>
+        /// Replaces the local config with the one in resources, but only if the local config is missing or older. Returns the local config
+        /// </summary>
+        /// <param name="pathAndFilenameToConfigInResources"></param>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //----------------------------------------------------------------//
+        public static void UpdateLocalDataAndReturn
+        //----------------------------------------------------------------//
+        (
+            string pathAndFilenameToConfigInResources,
+            bool showDebugLogs,
+            Action<ConfigManagerSystem> OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            if(string.IsNullOrEmpty( pathAndFilenameToConfigInResources ))
+            {
+                OnFailed?.Invoke( "ConfigManager.cs UpdateLocalDataAndReturn() passed in pathAndFilenameToConfigInResources is null or empty" );
+                return;
+            }
+
+            //Reset our temp variables
+            resourcesSystem = null;
+            localSystem = null;
+
+            int count = 0;
+            int total = 2;
+
+            //Create the resources and local configs
+            Create
+            (
+                new Options() { showDebugLogs = showDebugLogs },
+                ( ConfigManagerSystem system )=>
+                {
+                    resourcesSystem = system;
+                    count++;
+                    if(count == total)
+                    {
+                        LoadResourcesConfig( pathAndFilenameToConfigInResources, OnSuccess, OnFailed );
+                    }
+                },
+                OnFailed
+            );
+
+            Create
+            (
+                new Options() { showDebugLogs = showDebugLogs },
+                ( ConfigManagerSystem system ) =>
+                {
+                    localSystem = system;
+                    count++;
+                    if(count == total)
+                    {
+                        LoadResourcesConfig( pathAndFilenameToConfigInResources, OnSuccess, OnFailed );
+                    }
+                },
+                OnFailed
+            );
+
+        } //END UpdateLocalDataAndReturn Method
+
+        /// <summary>
+        /// Next step is to load the resources config
+        /// </summary>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //------------------------------------------------------------//
+        private static void LoadResourcesConfig
+        //------------------------------------------------------------//
+        ( 
+            string pathAndFilenameToConfigInResources,
+            Action<ConfigManagerSystem> OnSuccess, 
+            Action<string> OnFailed 
+        )
+        {
+            ReadFileContentsFromResources
+            (
+                resourcesSystem,
+                pathAndFilenameToConfigInResources,
+                (JSON json) => 
+                {
+                    //Resources is loaded, load the local config next
+                    LoadLocalConfig
+                    (
+                        resourcesSystem.path,
+                        pathAndFilenameToConfigInResources,
+                        OnSuccess,
+                        OnFailed
+                    );
+                },
+                OnFailed
+
+            );
+
+        } //END LoadResourcesConfig
+
+        /// <summary>
+        /// Next step is to load the local config, use the local path from resources data using the 'config' object and 'path' key
+        /// </summary>
+        /// <param name="OnSuccess"></param>
+        /// <param name="OnFailed"></param>
+        //------------------------------------------------------------//
+        private static void LoadLocalConfig
+        //------------------------------------------------------------//
+        (
+            string pathWithFilenameAndExtensionToConfigFileOnLocal,
+            string pathAndFilenameToConfigInResources,
+            Action<ConfigManagerSystem> OnSuccess,
+            Action<string> OnFailed
+        )
+        {
+            localSystem.path = pathWithFilenameAndExtensionToConfigFileOnLocal;
+
+            Debug.Log( "LoadLocalConfig() start ... localSystem.path = " + localSystem.path );
+
+            ReadFileContents
+            (
+                localSystem,
+                (JSON json ) =>
+                {
+                    //Local file found, is it newer?
+                    if(IsNewer( localSystem, resourcesSystem ))
+                    {
+                        //Local file is newer, return it
+                        OnSuccess?.Invoke( localSystem );
+                        return;
+                    }
+                    else
+                    {
+                        //Local file is older, replace it with the resources data,
+                        //replace it using what we have in resources then return the new local config system
+                        ReplaceFileUsingResources
+                        (
+                            localSystem,
+                            pathAndFilenameToConfigInResources,
+                            ( JSON json ) =>
+                            {
+                                OnSuccess?.Invoke( localSystem );
+                            },
+                            OnFailed
+                        );
+                    }
+                },
+
+                (string error)=>
+                {
+                    //Local file not found, replace it using what we have in resources then return the new local config system
+                    ReplaceFileUsingResources
+                    (
+                        localSystem,
+                        pathAndFilenameToConfigInResources,
+                        (JSON json) =>
+                        {
+                            OnSuccess?.Invoke( localSystem );
+                        },
+                        OnFailed
+                    );
+                }
+
+            );
+
+        } //END LoadLocalConfig
+
+#endif
+
+#endregion
 
         #region PUBLIC - DESTROY
 

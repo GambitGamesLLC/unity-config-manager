@@ -56,31 +56,16 @@ namespace gambit.config
             Debug.LogError( "Demo.cs Start() Missing 'EXT_TOTALJSON' scripting define symbol in project settings." );
             return;
 #else
-            //Create a ConfigManager
-            ConfigManager.Create
+            //Update local if needed and grab its config system
+            ConfigManager.UpdateLocalDataAndReturn
             (
-                //Options
-                new ConfigManager.Options()
+                backupPathAndNameInResources,
+                debug,
+                (ConfigManager.ConfigManagerSystem localSystem)=>
                 {
-                    showDebugLogs = debug
+                    system = localSystem;
+                    PullValuesFromData();
                 },
-
-                //OnSuccess
-                (ConfigManager.ConfigManagerSystem newSystem ) =>  
-                {
-                    system = newSystem;
-
-                    //Pull the config file path from our config file in resources
-                    ConfigManager.ReadFileContentsFromResources
-                    (
-                        system,
-                        backupPathAndNameInResources,
-                        PullValuesFromData,
-                        LogError
-                    );
-                },
-
-                //OnFailed
                 LogError
             );
 #endif
@@ -95,7 +80,7 @@ namespace gambit.config
         /// After our data is loaded, pull variables to set them in our local demo component
         /// </summary>
         //----------------------------------------//
-        private void PullValuesFromData( JSON json )
+        private void PullValuesFromData()
         //----------------------------------------//
         {
 
@@ -105,8 +90,8 @@ namespace gambit.config
             Debug.Log( "Demo.cs PullValuesFromData() path = " + system.path );
 
 
-            int areDone = 0;
-            int waitForTotal = 5;
+            int count = 0;
+            int total = 5;
 
             //Pull the 'app/longname' variable from the data to check its integrity
             ConfigManager.GetNestedString
@@ -122,11 +107,11 @@ namespace gambit.config
                         Debug.Log( "Demo.cs PullValuesFromData() found longname = " + text );
                     }
 
-                    areDone++;
+                    count++;
 
-                    if(areDone == waitForTotal)
+                    if(count == total)
                     {
-                        ReplaceFileUsingResources();
+                        Debug.Log( "Finished pulling data from local system" );
                     }
                 },
                 LogError
@@ -146,11 +131,11 @@ namespace gambit.config
                         Debug.Log( "Demo.cs PullValuesFromData() found shortname = " + text );
                     }
 
-                    areDone++;
+                    count++;
 
-                    if(areDone == waitForTotal)
+                    if(count == total)
                     {
-                        ReplaceFileUsingResources();
+                        Debug.Log( "Finished pulling data from local system" );
                     }
                 },
                 LogError
@@ -170,11 +155,11 @@ namespace gambit.config
                         Debug.Log( "Demo.cs PullValuesFromData() found app path = " + text );
                     }
 
-                    areDone++;
+                    count++;
 
-                    if(areDone == waitForTotal)
+                    if(count == total)
                     {
-                        ReplaceFileUsingResources();
+                        Debug.Log( "Finished pulling data from local system" );
                     }
                 },
                 LogError
@@ -194,11 +179,11 @@ namespace gambit.config
                         Debug.Log( "Demo.cs PullValuesFromData() found address = " + text );
                     }
 
-                    areDone++;
+                    count++;
 
-                    if(areDone == waitForTotal)
+                    if(count == total)
                     {
-                        ReplaceFileUsingResources();
+                        Debug.Log( "Finished pulling data from local system" );
                     }
                 },
                 LogError
@@ -218,53 +203,17 @@ namespace gambit.config
                         Debug.Log( "Demo.cs PullValuesFromData() found port = " + value );
                     }
 
-                    areDone++;
+                    count++;
 
-                    if(areDone == waitForTotal)
+                    if(count == total)
                     {
-                        ReplaceFileUsingResources();
+                        Debug.Log( "Finished pulling data from local system" );
                     }
                 },
                 LogError
             );
 
         } //END PullValuesFromData Method
-
-        #endregion
-
-        #region PRIVATE - REPLACE FILE USING RESOURCES BACKUP
-
-        /// <summary>
-        /// Sets the ConfigManagerSystem's path variable using the data from the backup file we found in resources
-        /// </summary>
-        /// <param name="json"></param>
-        //--------------------------------------------------//
-        private void ReplaceFileUsingResources()
-        //--------------------------------------------------//
-        {
-
-            //Delete + Replace the file using our backup in Resources
-            ConfigManager.ReplaceFileUsingResources
-            (
-                system,
-                backupPathAndNameInResources,
-
-                //OnSuccess
-                ( JSON json ) =>
-                {
-                    //Log our success
-                    if(debug)
-                    {
-                        Debug.Log( "Demo.cs ReplaceFileUsingResources() Successfully replaced config file using backup in resources" );
-                        ConfigManager.Log( system );
-                    }
-                },
-
-                //OnFailed
-                LogError
-            );
-
-        } //END GetPathFromData
 
         #endregion
 

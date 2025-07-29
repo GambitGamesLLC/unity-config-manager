@@ -12,5 +12,9 @@
 	"communication": {
 		"address": "127.0.0.1",
 		"port": 50000
+	},
+	"app1": {
+		"name": "Brain Waves",
+		"path": "%LOCALAPPDATA%\\M3DVR\\Ship\\Ship.exe"
 	}
 }

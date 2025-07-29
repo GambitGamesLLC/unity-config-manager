@@ -91,7 +91,7 @@ namespace gambit.config
 
 
             int count = 0;
-            int total = 5;
+            int total = 6;
 
             //Pull the 'app/longname' variable from the data to check its integrity
             ConfigManager.GetNestedString
@@ -201,6 +201,30 @@ namespace gambit.config
                     if(debug)
                     {
                         Debug.Log( "Demo.cs PullValuesFromData() found port = " + value );
+                    }
+
+                    count++;
+
+                    if(count == total)
+                    {
+                        Debug.Log( "Finished pulling data from local system" );
+                    }
+                },
+                LogError
+            );
+
+            //Pull the 'app1/name' variable from the data to check its integrity
+            ConfigManager.GetNestedString
+            (
+                system,
+                new string[ ] { "app1", "name" },
+
+                //OnSuccess
+                ( string value ) =>
+                {
+                    if(debug)
+                    {
+                        Debug.Log( "Demo.cs PullValuesFromData() found app1/name = " + value );
                     }
 
                     count++;

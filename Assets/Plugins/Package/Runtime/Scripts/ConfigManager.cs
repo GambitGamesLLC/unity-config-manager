@@ -105,6 +105,10 @@ namespace gambit.config
         public class ConfigManagerSystem
         //----------------------------------------------------------//
         {
+            /// <summary>
+            /// [Optional] Unique identifier for the system. Empty by default
+            /// </summary>
+            public string id;
 
             /// <summary>
             /// The options object passed in during Create()
